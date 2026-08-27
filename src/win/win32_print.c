@@ -261,7 +261,7 @@ int dt_win_resolve_dpi_from_dm(DEVMODEW *dmW, const wchar_t *wprinter)
 
     // Expand DEVMODE
     DEVMODEW *dmW_expanded = NULL;
-    LONG dmSize = DocumentPropertiesW(NULL, NULL, wprinter,
+    LONG dmSize = DocumentPropertiesW(NULL, NULL, (LPWSTR)wprinter,
                                       NULL, NULL, 0);
 
     if(dmSize > 0)
@@ -269,7 +269,7 @@ int dt_win_resolve_dpi_from_dm(DEVMODEW *dmW, const wchar_t *wprinter)
         dmW_expanded = (DEVMODEW *)malloc(dmSize);
         if(dmW_expanded)
         {
-            if(DocumentPropertiesW(NULL, NULL, wprinter,
+            if(DocumentPropertiesW(NULL, NULL, (LPWSTR)wprinter,
                                    dmW_expanded, dmW,
                                    DM_OUT_BUFFER) != IDOK)
             {
@@ -366,6 +366,8 @@ gboolean dt_win_sync_cached_dm_to_pinfo(dt_win32_print_ctx_t *ctx)
   {
     //resolution
     pinfo->printer.resolution = dt_win_resolve_dpi_from_dm(dm, wprinter); // assume square pixels
+    int dpiX = pinfo->printer.resolution;
+    int dpiY = pinfo->printer.resolution;
     
     HDC hdc = CreateDCW(L"WINSPOOL", wprinter, NULL, dm);
     if(hdc)
@@ -1087,6 +1089,7 @@ static IXpsOMColorProfileResource *_win_build_color_profile_resource(IXpsOMObjec
 } 
 static HRESULT _win_encode_bitmap_to_png_stream(IWICImagingFactory *wic,
                                                 IWICBitmapSource *bitmap,
+                                                const WICPixelFormatGUID *pixel_format,
                                                 IStream **stream_out)
 {
   if(!wic || !bitmap || !stream_out) return E_POINTER;
@@ -1114,7 +1117,7 @@ static HRESULT _win_encode_bitmap_to_png_stream(IWICImagingFactory *wic,
           UINT w = 0, h = 0;
           bitmap->lpVtbl->GetSize(bitmap, &w, &h);
 
-          WICPixelFormatGUID format = GUID_WICPixelFormat24bppRGB;
+          WICPixelFormatGUID format = *pixel_format;
           hr = frame->lpVtbl->SetSize(frame, w, h);
           if(SUCCEEDED(hr))
             hr = frame->lpVtbl->SetPixelFormat(frame, &format);
@@ -1165,20 +1168,27 @@ static IXpsOMImageResource *_win_build_image_resource(IXpsOMObjectFactory *facto
                                 (void **)&wic);
   if(FAILED(hr) || !wic)
     return NULL;
-
-  const UINT stride = (UINT)box->exp_width * 3;
+  
+  const gboolean is_16bit = (box->img_bpp == 16);
+  const UINT bytes_per_pixel = is_16bit ? 6 : 3;
+  const UINT stride = (UINT)box->exp_width * bytes_per_pixel;
+  const GUID *pixel_format = is_16bit ? &GUID_WICPixelFormat48bppRGB : &GUID_WICPixelFormat24bppRGB;   
+  
+  DBG_MARK("Start create bitmap");
+  DBG_MARK("WIC bitmap: exp_width=%d exp_height=%d img_bpp=%d stride=%u cbBufferSize=%u",
+         box->exp_width, box->exp_height, box->img_bpp, stride, stride * box->exp_height);
   hr = wic->lpVtbl->CreateBitmapFromMemory(wic,
-                                           box->exp_width,
-                                           box->exp_height,
-                                           &GUID_WICPixelFormat24bppRGB,
-                                           stride,
-                                           stride * box->exp_height,
-                                           (BYTE *)box->buf,
-                                           &bitmap);
-
+                                          box->exp_width,
+                                          box->exp_height,
+                                          pixel_format,
+                                          stride,
+                                          stride * box->exp_height,
+                                          (BYTE *)box->buf,
+                                          &bitmap);
+  DBG_MARK("finished create bitmap from memory, create png");
   if(SUCCEEDED(hr) && bitmap)
   {
-    hr = _win_encode_bitmap_to_png_stream(wic, (IWICBitmapSource *)bitmap, &img_stream);
+    hr = _win_encode_bitmap_to_png_stream(wic, (IWICBitmapSource *)bitmap, pixel_format, &img_stream);
     if(SUCCEEDED(hr) && img_stream)
     {
       wchar_t uri[64];
