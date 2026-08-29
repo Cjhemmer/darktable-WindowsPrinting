@@ -1,6 +1,6 @@
 /*
     This file is part of darktable,
-    Copyright (C) 2014-2026 darktable developers.
+    Copyright (C) 2026 darktable developers.
 
     darktable is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
@@ -24,6 +24,7 @@
 
 G_BEGIN_DECLS
 
+#define PRINT_CONFIG_PREFIX "plugins/print/print/"
 typedef struct dt_win32_print_ctx_t {
     dt_print_info_t *base;   // cross-platform pinfo
     HANDLE           hPrinter;
