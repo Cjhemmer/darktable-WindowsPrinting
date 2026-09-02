@@ -85,6 +85,14 @@ changes (where available).
   XMPs can be used to create duplicates or replace the current
   edit. Multiple XMPs create one duplicate per file.
 
+- In the borders (framing) module, disable frame line controls
+  when the border settings would prevent the frame line from
+  being visible.
+
+- Added an interactive editing mode allowing users to correct a color
+  by selecting it directly on the photo with the mouse wheel, just as
+  was already possible with the "tone equalizer" module.
+
 ## Performance Improvements
 
 - Replaced quadratic XMP history writes with a linear algorithm.
@@ -177,6 +185,8 @@ changes (where available).
 - Fixed crash when navigating images in the darkroom with an
   image pinned in the 2nd window.
 
+- Fixed darkroom watermark issues related to tag & metadata changes.
+
 - Fixed refinements to forwarded raster masks being ignored along
   the OpenCL path.
 
@@ -192,6 +202,12 @@ changes (where available).
 
 - Fixed broken dragging in sliders' precise-entry mode
   in GTK3.
+
+- Fixed the feather of a drawn path being lost when the shape was resized
+  with the scroll wheel.
+
+- Fixed numeric error in the framing module (borders) causing the frame
+  line to be off-center for certain border sizes.
 
 ## Lua
 
@@ -231,16 +247,13 @@ changes (where available).
 
 ### Mandatory
 
-- potrace 1.16 is a new requirement
+- N/A
 
 ### Optional
 
-- ONNX Runtime 1.18+ for AI features
-
-- libarchive for AI model extraction
-
-- OpenCV 4 or 5 for HDR exposure-bracket auto-alignment (only the core,
-  imgproc and flann modules plus features2d/calib3d on OpenCV 4, or features/geometry on OpenCV 5)
+- OpenCV 4 or 5 for HDR exposure-bracket auto-alignment (only the
+  core, imgproc and flann modules plus features2d/calib3d on OpenCV 4,
+  or features/geometry on OpenCV 5)
 
 ## Camera support, compared to 5.6
 
